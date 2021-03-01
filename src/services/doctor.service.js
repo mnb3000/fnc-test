@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 const { Doctor } = require('../models');
 const clinicService = require('./clinic.service');
+const healthServiceService = require('./healthService.service');
 
 /**
  * Create a doctor
@@ -22,6 +23,15 @@ const getDoctorById = async (doctorId) => {
 };
 
 /**
+ * Get multiple doctors by ids
+ * @param {ObjectId[]} doctorIds
+ * @returns {Promise<Array<Doctor>>}
+ */
+const getDoctorsByIds = async (doctorIds) => {
+  return Doctor.find({ _id: { $in: doctorIds } }).exec();
+};
+
+/**
  * Update a doctor by id
  * @param {ObjectId} doctorId
  * @param {Object} updateBody
@@ -35,6 +45,16 @@ const updateDoctorById = async (doctorId, updateBody) => {
   Object.assign(doctor, updateBody);
   await doctor.save();
   return doctor;
+};
+
+/**
+ * Update a doctor by id using raw MongoDB update query
+ * @param {ObjectId} clinicId
+ * @param {Object} updateBody
+ * @returns {Promise<Doctor>}
+ */
+const updateDoctorByIdRawQuery = async (clinicId, updateBody) => {
+  return Doctor.findByIdAndUpdate(clinicId, updateBody, { new: true }).exec();
 };
 
 /**
@@ -61,15 +81,36 @@ const deleteDoctorById = async (doctorId) => {
   if (!doctor) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
   }
+
+  // Remove the doctor from all of the clinics
   await clinicService.updateClinicsByFilter({ doctors: doctorId }, { $pull: { doctors: doctorId } });
+
+  // Deref all of doctor's health services
+  await Promise.all(doctor.clinics.map((clinic) => clinicService.updateClinicHealthServices(clinic._id)));
   await doctor.remove();
   return doctor;
+};
+
+const addHealthServiceToDoctor = async (healthServiceId, doctorId) => {
+  const healthService = await healthServiceService.getHealthServiceById(healthServiceId);
+  if (!healthService) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'HealthService not found');
+  }
+  const doctor = await getDoctorById(doctorId);
+  if (!doctor) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
+  }
+  await clinicService.updateClinicsByFilter({ doctors: doctorId }, { $addToSet: { healthServices: healthServiceId } });
+  return updateDoctorByIdRawQuery(doctorId, { $addToSet: { healthServices: healthServiceId } });
 };
 
 module.exports = {
   createDoctor,
   getDoctorById,
+  getDoctorsByIds,
   updateDoctorById,
+  updateDoctorByIdRawQuery,
   updateDoctorsByFilter,
   deleteDoctorById,
+  addHealthServiceToDoctor,
 };

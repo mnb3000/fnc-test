@@ -67,3 +67,11 @@ const deleteHealthService = async (healthServiceId) => {
   await healthService.remove();
   return healthService;
 };
+
+module.exports = {
+  createHealthService,
+  getHealthServiceById,
+  updateHealthServiceById,
+  updateHealthServicesByFilter,
+  deleteHealthService,
+};

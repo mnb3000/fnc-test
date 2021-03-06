@@ -50,7 +50,7 @@ const updateDoctorById = async (doctorId, updateBody) => {
 /**
  * Update a doctor by id using raw MongoDB update query
  * @param {ObjectId} clinicId
- * @param {Object} updateBody
+ * @param {UpdateQuery<Document>} updateBody Update body (RAW MONGO, USE $SET)
  * @returns {Promise<Doctor>}
  */
 const updateDoctorByIdRawQuery = async (clinicId, updateBody) => {
@@ -60,7 +60,7 @@ const updateDoctorByIdRawQuery = async (clinicId, updateBody) => {
 /**
  * Updates multiple doctors by filter
  * @param {Object} filter
- * @param {Object} updateBody Update body (RAW MONGO, USE $SET)
+ * @param {UpdateQuery<Document>} updateBody Update body (RAW MONGO, USE $SET)
  * @returns {Promise<Number>} Number of updated documents
  */
 const updateDoctorsByFilter = async (filter, updateBody) => {
@@ -91,6 +91,12 @@ const deleteDoctorById = async (doctorId) => {
   return doctor;
 };
 
+/**
+ * Add a health service to doctor (and it's clinics)
+ * @param {ObjectId} healthServiceId
+ * @param {ObjectId} doctorId
+ * @returns {Promise<Doctor>}
+ */
 const addHealthServiceToDoctor = async (healthServiceId, doctorId) => {
   const healthService = await healthServiceService.getHealthServiceById(healthServiceId);
   if (!healthService) {
@@ -104,6 +110,28 @@ const addHealthServiceToDoctor = async (healthServiceId, doctorId) => {
   return updateDoctorByIdRawQuery(doctorId, { $addToSet: { healthServices: healthServiceId } });
 };
 
+/**
+ * Remove health service from doctor and update clinics' health service list
+ * @param {ObjectId} healthServiceId
+ * @param {ObjectId} doctorId
+ * @returns {Promise<Doctor>}
+ */
+const removeHealthServiceFromDoctor = async (healthServiceId, doctorId) => {
+  const healthService = await healthServiceService.getHealthServiceById(healthServiceId);
+  if (!healthService) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'HealthService not found');
+  }
+  const doctor = await getDoctorById(doctorId);
+  if (!doctor) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
+  }
+  const newDoctor = await updateDoctorByIdRawQuery(doctorId, { $addToSet: { healthServices: healthServiceId } });
+  await Promise.all(
+    doctor.clinics.map((clinic) => clinic._id).map((clinicId) => clinicService.updateClinicHealthServices(clinicId))
+  );
+  return newDoctor;
+};
+
 module.exports = {
   createDoctor,
   getDoctorById,
@@ -113,4 +141,5 @@ module.exports = {
   updateDoctorsByFilter,
   deleteDoctorById,
   addHealthServiceToDoctor,
+  removeHealthServiceFromDoctor,
 };

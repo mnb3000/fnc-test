@@ -77,26 +77,6 @@ const deleteClinicById = async (clinicId) => {
 };
 
 /**
- * Adds a doctor and it's services to a clinic
- * @param {ObjectId} doctorId
- * @param {ObjectId} clinicId
- * @returns {Promise<Clinic>}
- */
-const addDoctorToClinic = async (doctorId, clinicId) => {
-  const doctor = await doctorService.getDoctorById(doctorId);
-  if (!doctor) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
-  }
-  const clinic = await getClinicById(clinicId);
-  if (!clinic) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
-  }
-
-  await doctorService.updateDoctorByIdRawQuery(doctorId, { $addToSet: { clinics: clinicId } });
-  return updateClinicByIdRawQuery(clinicId, { $addToSet: { healthServices: { $each: doctor.healthServices } } });
-};
-
-/**
  * Update all health service references by clinic id
  * @param {ObjectId} clinicId
  * @returns {Promise<Clinic>}
@@ -118,6 +98,47 @@ const updateClinicHealthServices = async (clinicId) => {
   return clinic;
 };
 
+/**
+ * Adds a doctor and it's services to a clinic
+ * @param {ObjectId} doctorId
+ * @param {ObjectId} clinicId
+ * @returns {Promise<Clinic>}
+ */
+const addDoctorToClinic = async (doctorId, clinicId) => {
+  const doctor = await doctorService.getDoctorById(doctorId);
+  if (!doctor) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
+  }
+  const clinic = await getClinicById(clinicId);
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
+
+  await doctorService.updateDoctorByIdRawQuery(doctorId, { $addToSet: { clinics: clinicId } });
+  return updateClinicByIdRawQuery(clinicId, { $addToSet: { healthServices: { $each: doctor.healthServices } } });
+};
+
+/**
+ * Remove a doctor and it's services from a clinic
+ * @param {ObjectId} doctorId
+ * @param {ObjectId} clinicId
+ * @returns {Promise<Clinic>}
+ */
+const removeDoctorFromClinic = async (doctorId, clinicId) => {
+  const doctor = await doctorService.getDoctorById(doctorId);
+  if (!doctor) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
+  }
+  const clinic = await getClinicById(clinicId);
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
+
+  await doctorService.updateDoctorByIdRawQuery(doctorId, { $pull: { clinics: clinicId } });
+  await Clinic.findByIdAndUpdate(clinicId, { $pull: { doctors: doctorId } }).exec();
+  return updateClinicHealthServices(clinicId);
+};
+
 module.exports = {
   createClinic,
   getClinicById,
@@ -125,6 +146,7 @@ module.exports = {
   updateClinicByIdRawQuery,
   updateClinicsByFilter,
   deleteClinicById,
-  addDoctorToClinic,
   updateClinicHealthServices,
+  addDoctorToClinic,
+  removeDoctorFromClinic,
 };

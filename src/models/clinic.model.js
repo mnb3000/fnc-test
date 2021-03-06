@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { toJSON } = require('./plugins');
+const { toJSON, paginate } = require('./plugins');
 
 const clinicSchema = mongoose.Schema(
   {
@@ -27,6 +27,7 @@ const clinicSchema = mongoose.Schema(
 );
 
 clinicSchema.plugin(toJSON);
+clinicSchema.plugin(paginate);
 
 /**
  * @typedef Clinic

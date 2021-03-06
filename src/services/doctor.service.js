@@ -1,8 +1,6 @@
 const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 const { Doctor } = require('../models');
-const clinicService = require('./clinic.service');
-const healthServiceService = require('./healthService.service');
 
 /**
  * Create a doctor
@@ -11,6 +9,19 @@ const healthServiceService = require('./healthService.service');
  */
 const createDoctor = async (doctorBody) => {
   return Doctor.create(doctorBody);
+};
+
+/**
+ * Query for doctors
+ * @param {Object} filter - Mongo filter
+ * @param {Object} options - Query options
+ * @param {string} [options.sortBy] - Sort option in the format: sortField:(desc|asc)
+ * @param {number} [options.limit] - Maximum number of results per page (default = 10)
+ * @param {number} [options.page] - Current page (default = 1)
+ * @returns {Promise<QueryResult>}
+ */
+const queryDoctors = async (filter, options) => {
+  return Doctor.paginate(filter, options);
 };
 
 /**
@@ -25,7 +36,7 @@ const getDoctorById = async (doctorId) => {
 /**
  * Get multiple doctors by ids
  * @param {ObjectId[]} doctorIds
- * @returns {Promise<Array<Doctor>>}
+ * @returns {Promise<Doctor[]>}
  */
 const getDoctorsByIds = async (doctorIds) => {
   return Doctor.find({ _id: { $in: doctorIds } }).exec();
@@ -38,7 +49,7 @@ const getDoctorsByIds = async (doctorIds) => {
  * @returns {Promise<Doctor>}
  */
 const updateDoctorById = async (doctorId, updateBody) => {
-  const doctor = getDoctorById(doctorId);
+  const doctor = await getDoctorById(doctorId);
   if (!doctor) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
   }
@@ -73,10 +84,11 @@ const updateDoctorsByFilter = async (filter, updateBody) => {
 
 /**
  * Delete a doctor by id
+ * @param {ClinicService} clinicService
  * @param {ObjectId} doctorId
  * @returns {Promise<Doctor>}
  */
-const deleteDoctorById = async (doctorId) => {
+const deleteDoctorById = async (clinicService, doctorId) => {
   const doctor = await getDoctorById(doctorId);
   if (!doctor) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
@@ -93,11 +105,13 @@ const deleteDoctorById = async (doctorId) => {
 
 /**
  * Add a health service to doctor (and it's clinics)
+ * @param {HealthServiceService} healthServiceService
+ * @param {ClinicService} clinicService
  * @param {ObjectId} healthServiceId
  * @param {ObjectId} doctorId
  * @returns {Promise<Doctor>}
  */
-const addHealthServiceToDoctor = async (healthServiceId, doctorId) => {
+const addHealthServiceToDoctor = async (healthServiceService, clinicService, healthServiceId, doctorId) => {
   const healthService = await healthServiceService.getHealthServiceById(healthServiceId);
   if (!healthService) {
     throw new ApiError(httpStatus.NOT_FOUND, 'HealthService not found');
@@ -112,11 +126,13 @@ const addHealthServiceToDoctor = async (healthServiceId, doctorId) => {
 
 /**
  * Remove health service from doctor and update clinics' health service list
+ * @param {HealthServiceService} healthServiceService
+ * @param {ClinicService} clinicService
  * @param {ObjectId} healthServiceId
  * @param {ObjectId} doctorId
  * @returns {Promise<Doctor>}
  */
-const removeHealthServiceFromDoctor = async (healthServiceId, doctorId) => {
+const removeHealthServiceFromDoctor = async (healthServiceService, clinicService, healthServiceId, doctorId) => {
   const healthService = await healthServiceService.getHealthServiceById(healthServiceId);
   if (!healthService) {
     throw new ApiError(httpStatus.NOT_FOUND, 'HealthService not found');
@@ -125,15 +141,19 @@ const removeHealthServiceFromDoctor = async (healthServiceId, doctorId) => {
   if (!doctor) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
   }
-  const newDoctor = await updateDoctorByIdRawQuery(doctorId, { $addToSet: { healthServices: healthServiceId } });
+  const newDoctor = await updateDoctorByIdRawQuery(doctorId, { $pull: { healthServices: healthServiceId } });
   await Promise.all(
     doctor.clinics.map((clinic) => clinic._id).map((clinicId) => clinicService.updateClinicHealthServices(clinicId))
   );
   return newDoctor;
 };
 
-module.exports = {
+/**
+ * @typedef DoctorService
+ */
+const doctorService = {
   createDoctor,
+  queryDoctors,
   getDoctorById,
   getDoctorsByIds,
   updateDoctorById,
@@ -143,3 +163,5 @@ module.exports = {
   addHealthServiceToDoctor,
   removeHealthServiceFromDoctor,
 };
+
+module.exports = doctorService;

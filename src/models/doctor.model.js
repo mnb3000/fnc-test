@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const paginate = require('./plugins/paginate.plugin');
 const { toJSON } = require('./plugins');
 
 const doctorSchema = mongoose.Schema(
@@ -27,6 +28,7 @@ const doctorSchema = mongoose.Schema(
 );
 
 doctorSchema.plugin(toJSON);
+doctorSchema.plugin(paginate);
 
 /**
  * @typedef Doctor

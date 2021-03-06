@@ -9,7 +9,6 @@ router.post('/register', validate(authValidation.register), authController.regis
 router.post('/login', validate(authValidation.login), authController.login);
 router.post('/logout', validate(authValidation.logout), authController.logout);
 router.post('/refresh-tokens', validate(authValidation.refreshTokens), authController.refreshTokens);
-router.post('/forgot-password', validate(authValidation.forgotPassword), authController.forgotPassword);
 router.post('/reset-password', validate(authValidation.resetPassword), authController.resetPassword);
 
 module.exports = router;
@@ -175,35 +174,6 @@ module.exports = router;
  *                $ref: '#/components/schemas/AuthTokens'
  *        "401":
  *          $ref: '#/components/responses/Unauthorized'
- */
-
-/**
- * @swagger
- * path:
- *  /auth/forgot-password:
- *    post:
- *      summary: Forgot password
- *      description: An email will be sent to reset password.
- *      tags: [Auth]
- *      requestBody:
- *        required: true
- *        content:
- *          application/json:
- *            schema:
- *              type: object
- *              required:
- *                - email
- *              properties:
- *                email:
- *                  type: string
- *                  format: email
- *              example:
- *                email: fake@example.com
- *      responses:
- *        "204":
- *          description: No content
- *        "404":
- *          $ref: '#/components/responses/NotFound'
  */
 
 /**

@@ -58,6 +58,22 @@ components:
           items:
             type: string
 
+    Clinic:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        doctors:
+          type: array
+          items:
+            type: string
+        healthServices:
+          type: array
+          items:
+            type: string
+
     AuthTokens:
       type: object
       properties:

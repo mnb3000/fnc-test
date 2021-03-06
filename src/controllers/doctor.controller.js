@@ -30,7 +30,7 @@ const updateDoctor = catchAsync(async (req, res) => {
 });
 
 const deleteDoctor = catchAsync(async (req, res) => {
-  await doctorService.deleteDoctorById(clinicService, req.params.doctorId);
+  await doctorService.deleteDoctorById(clinicService, doctorService, req.params.doctorId);
   res.status(httpStatus.NO_CONTENT).send();
 });
 

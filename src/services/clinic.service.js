@@ -130,7 +130,9 @@ const addDoctorToClinic = async (doctorService, doctorId, clinicId) => {
   }
 
   await doctorService.updateDoctorByIdRawQuery(doctorId, { $addToSet: { clinics: clinicId } });
-  return updateClinicByIdRawQuery(clinicId, { $addToSet: { healthServices: { $each: doctor.healthServices } } });
+  return updateClinicByIdRawQuery(clinicId, {
+    $addToSet: { healthServices: { $each: doctor.healthServices }, doctors: doctorId },
+  });
 };
 
 /**
@@ -152,7 +154,7 @@ const removeDoctorFromClinic = async (doctorService, doctorId, clinicId) => {
 
   await doctorService.updateDoctorByIdRawQuery(doctorId, { $pull: { clinics: clinicId } });
   await Clinic.findByIdAndUpdate(clinicId, { $pull: { doctors: doctorId } }).exec();
-  return updateClinicHealthServices(clinicId);
+  return updateClinicHealthServices(doctorService, clinicId);
 };
 
 /**

@@ -85,10 +85,11 @@ const updateDoctorsByFilter = async (filter, updateBody) => {
 /**
  * Delete a doctor by id
  * @param {ClinicService} clinicService
+ * @param {DoctorService} doctorService
  * @param {ObjectId} doctorId
  * @returns {Promise<Doctor>}
  */
-const deleteDoctorById = async (clinicService, doctorId) => {
+const deleteDoctorById = async (clinicService, doctorService, doctorId) => {
   const doctor = await getDoctorById(doctorId);
   if (!doctor) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Doctor not found');
@@ -98,7 +99,7 @@ const deleteDoctorById = async (clinicService, doctorId) => {
   await clinicService.updateClinicsByFilter({ doctors: doctorId }, { $pull: { doctors: doctorId } });
 
   // Deref all of doctor's health services
-  await Promise.all(doctor.clinics.map((clinic) => clinicService.updateClinicHealthServices(clinic._id)));
+  await Promise.all(doctor.clinics.map((clinic) => clinicService.updateClinicHealthServices(doctorService, clinic._id)));
   await doctor.remove();
   return doctor;
 };
